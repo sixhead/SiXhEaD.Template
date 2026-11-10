@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>$title</title>
+</head>
+<body>
+
+<h3>$title</h3>
+
+<!--template:firefox-->
+<h4>Hello Firefox</h4>
+<p>$user_agent</p>
+<!--/template:firefox-->
+
+<!--template:chrome-->
+<h4>Hello Chrome</h4>
+<p>$user_agent</p>
+<!--/template:chrome-->
+
+<!--template:never-see-me-->
+<p>You will never see this text</p>
+<!--/template:never-see-me-->
+
+<ul>
+    <!--template:data1-->
+    <li class="$active">$no</li>
+    <!--/template:data1-->
+</ul>
+
+<div>
+    <!--template:data2-->
+    <div class="$css">$css_uc</div>
+    <!--/template:data2-->
+</div>
+
+</body>
+</html>
