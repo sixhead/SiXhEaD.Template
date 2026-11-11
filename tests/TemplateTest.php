@@ -23,11 +23,11 @@ final class TemplateTest extends TestCase
         $this->files = [];
     }
 
-    private function template(string $html, string $key = 'template'): Template
+    private function template(string $content, string $key = 'template'): Template
     {
         $file = tempnam(sys_get_temp_dir(), 'tp_');
         self::assertIsString($file);
-        file_put_contents($file, $html);
+        file_put_contents($file, $content);
         $this->files[] = $file;
         $tp = new Template($file, $key);
         $tp->setGlobal(false);
@@ -230,7 +230,7 @@ final class TemplateTest extends TestCase
         $tp->clear('x');
     }
 
-    public function testApplyBlockReturnsHtmlWithoutChangingBlock(): void
+    public function testApplyBlockReturnsContentWithoutChangingBlock(): void
     {
         $tp = $this->template('$out<!--template:x-->[$v]<!--/template:x-->');
         $tp->assign('v', 'value');
@@ -238,10 +238,10 @@ final class TemplateTest extends TestCase
         self::assertSame('[value][value]', $tp->generate());
     }
 
-    public function testBlockHtmlReturnsRawHtml(): void
+    public function testBlockContentReturnsRawContent(): void
     {
         $tp = $this->template('<!--template:x--><b>$v</b><!--/template:x-->');
-        self::assertSame('<b>$v</b>', $tp->blockHtml('x'));
+        self::assertSame('<b>$v</b>', $tp->blockContent('x'));
     }
 
     public function testSubCyclesThroughParts(): void

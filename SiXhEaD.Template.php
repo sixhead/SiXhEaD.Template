@@ -16,9 +16,9 @@ declare(strict_types=1);
  * - `<!--sub:{n}-->...<!--/sub:{n}-->` marks part n inside a block. Each
  *   apply() uses the next part in turn.
  *
- * @version 6.2.0
+ * @version 6.3.0
  *
- * @phpstan-type BlockState array{html: string, hide: bool, apply: string, subs: array<int, string>, current_sub: int}
+ * @phpstan-type BlockState array{content: string, hide: bool, apply: string, subs: array<int, string>, current_sub: int}
  */
 class Template
 {
@@ -53,7 +53,7 @@ class Template
     protected bool $is_global = true;
 
     /** Raw template content. */
-    protected string $all_html = '';
+    protected string $all_content = '';
 
     /** Block selected with block(), used by apply(), hide() and sub(). */
     protected ?string $block_name = null;
@@ -80,11 +80,11 @@ class Template
      */
     protected function start(): void
     {
-        $html = is_file($this->tp_file) ? file_get_contents($this->tp_file) : false;
-        if ($html === false) {
+        $content = is_file($this->tp_file) ? file_get_contents($this->tp_file) : false;
+        if ($content === false) {
             throw new RuntimeException("Template file \"{$this->tp_file}\" not found");
         }
-        $this->all_html = $html;
+        $this->all_content = $content;
         $this->autoHide();
     }
 
@@ -95,9 +95,9 @@ class Template
      */
     protected function autoHide(): void
     {
-        preg_match_all('/<!--\/' . $this->quotedKey() . ':([^<>]+?)-->/', $this->all_html, $matches);
+        preg_match_all('/<!--\/' . $this->quotedKey() . ':([^<>]+?)-->/', $this->all_content, $matches);
         foreach ($matches[1] as $block_name) {
-            $this->tp_block[$block_name] = $this->newBlock($this->findBlockHtml($block_name));
+            $this->tp_block[$block_name] = $this->newBlock($this->findBlockContent($block_name));
         }
     }
 
@@ -138,8 +138,8 @@ class Template
      */
     public function block(string $block_name): void
     {
-        $html = $this->tp_block[$block_name]['html'] ?? $this->findBlockHtml($block_name);
-        $this->tp_block[$block_name] = $this->newBlock($html);
+        $content = $this->tp_block[$block_name]['content'] ?? $this->findBlockContent($block_name);
+        $this->tp_block[$block_name] = $this->newBlock($content);
         $this->block_name = $block_name;
     }
 
@@ -177,33 +177,33 @@ class Template
     public function apply(): void
     {
         $block_name = $this->currentBlockName();
-        $html = $this->applyBlock($block_name);
+        $content = $this->applyBlock($block_name);
         $block = $this->getBlock($block_name);
         $block['hide'] = false;
-        $block['apply'] .= $html;
+        $block['apply'] .= $content;
         $this->tp_block[$block_name] = $block;
     }
 
     /**
-     * Returns the block HTML with current values. Does not change the block output.
+     * Returns the block content with current values. Does not change the block output.
      *
      * @throws RuntimeException When the block is not in the template.
      */
     public function applyBlock(string $block_name): string
     {
-        return $this->setValue($this->blockHtml($block_name));
+        return $this->setValue($this->blockContent($block_name));
     }
 
     /**
-     * Returns the raw block HTML. When sub() is active, returns the next sub part.
+     * Returns the raw block content. When sub() is active, returns the next sub part.
      *
      * @throws RuntimeException When the block is not in the template.
      */
-    public function blockHtml(string $block_name): string
+    public function blockContent(string $block_name): string
     {
         $block = $this->getBlock($block_name);
         if ($block['subs'] === []) {
-            return $block['html'];
+            return $block['content'];
         }
         $block['current_sub'] = $block['current_sub'] % count($block['subs']) + 1;
         $this->tp_block[$block_name] = $block;
@@ -222,7 +222,7 @@ class Template
         $block = $this->getBlock($block_name);
         $block['subs'] = [];
         for ($no = 1; $no <= $all_sub_in_block; $no++) {
-            if (!preg_match("/<!--SUB:{$no}-->(.*?)<!--\/SUB:{$no}-->/is", $block['html'], $matches)) {
+            if (!preg_match("/<!--SUB:{$no}-->(.*?)<!--\/SUB:{$no}-->/is", $block['content'], $matches)) {
                 throw new RuntimeException("<!--sub:{$no}-->...<!--/sub:{$no}--> not found in block \"{$block_name}\"");
             }
             $block['subs'][$no] = $matches[1];
@@ -238,7 +238,7 @@ class Template
      */
     public function applySub(string $block_name, int $sub_no): string
     {
-        return $this->setValue($this->subHtml($block_name, $sub_no));
+        return $this->setValue($this->subContent($block_name, $sub_no));
     }
 
     /**
@@ -246,7 +246,7 @@ class Template
      *
      * @throws RuntimeException When the block or sub part does not exist.
      */
-    protected function subHtml(string $block_name, int $sub_no): string
+    protected function subContent(string $block_name, int $sub_no): string
     {
         return $this->getBlock($block_name)['subs'][$sub_no]
             ?? throw new RuntimeException("Sub {$sub_no} not found in block \"{$block_name}\", call sub() first");
@@ -275,13 +275,13 @@ class Template
     }
 
     /**
-     * Returns the final HTML: blocks rendered, variables replaced, block markers removed.
+     * Returns the final content: blocks rendered, variables replaced, block markers removed.
      */
     public function generate(): string
     {
         $is_visible = false;
-        $html = $this->render($this->all_html, $is_visible);
-        return $this->replace('/<!--\/?' . $this->quotedKey() . ':[^<>]*?-->/', static fn(): string => '', $html);
+        $content = $this->render($this->all_content, $is_visible);
+        return $this->replace('/<!--\/?' . $this->quotedKey() . ':[^<>]*?-->/', static fn(): string => '', $content);
     }
 
     /**
@@ -290,18 +290,18 @@ class Template
      */
     public function display(): void
     {
-        $html = $this->generate();
-        $html = $this->replace('@\n?<!-- (tp|template).*?-->@', static fn(): string => '', $html);
-        $html = $this->replace("/(^[\r\n]*|[\r\n]+)\\s*[\r\n]+/", static fn(): string => "\n", $html);
-        echo $html;
+        $content = $this->generate();
+        $content = $this->replace('@\n?<!-- (tp|template).*?-->@', static fn(): string => '', $content);
+        $content = $this->replace("/(^[\r\n]*|[\r\n]+)\\s*[\r\n]+/", static fn(): string => "\n", $content);
+        echo $content;
     }
 
     /**
      * Replaces blocks and variables in one pass, so applied output is never processed again.
      *
-     * @param bool $is_visible Set to true when any block in $html produces output.
+     * @param bool $is_visible Set to true when any block in $content produces output.
      */
-    protected function render(string $html, bool &$is_visible): string
+    protected function render(string $content, bool &$is_visible): string
     {
         $key = $this->quotedKey();
         return $this->replace(
@@ -314,7 +314,7 @@ class Template
                 $is_visible = $is_visible || $output !== '';
                 return $output;
             },
-            $html,
+            $content,
             PREG_UNMATCHED_AS_NULL,
         );
     }
@@ -323,23 +323,23 @@ class Template
      * Returns the applied output of a block. A hidden block returns its rendered
      * content only when a child block inside it produces output.
      */
-    protected function renderBlock(string $block_name, string $inner_html): string
+    protected function renderBlock(string $block_name, string $inner_content): string
     {
         $block = $this->tp_block[$block_name] ?? null;
         if ($block !== null && !$block['hide']) {
             return $block['apply'];
         }
         $has_visible_child = false;
-        $html = $this->render($inner_html, $has_visible_child);
-        return $has_visible_child ? $html : '';
+        $content = $this->render($inner_content, $has_visible_child);
+        return $has_visible_child ? $content : '';
     }
 
     /**
-     * Replaces every `$name` in $html with its value.
+     * Replaces every `$name` in $content with its value.
      */
-    protected function setValue(string $html): string
+    protected function setValue(string $content): string
     {
-        return $this->replace('/\$(\w+)/', fn(array $matches): string => $this->varValue((string) $matches[1]), $html);
+        return $this->replace('/\$(\w+)/', fn(array $matches): string => $this->varValue((string) $matches[1]), $content);
     }
 
     /**
@@ -373,14 +373,14 @@ class Template
     }
 
     /**
-     * Returns the HTML between the markers of a block.
+     * Returns the content between the markers of a block.
      *
      * @throws RuntimeException When the block is not in the template.
      */
-    private function findBlockHtml(string $block_name): string
+    private function findBlockContent(string $block_name): string
     {
         $tag = $this->quotedKey() . ':' . preg_quote($block_name, '/');
-        if (!preg_match("/<!--{$tag}-->(.*?)<!--\\/{$tag}-->/s", $this->all_html, $matches)) {
+        if (!preg_match("/<!--{$tag}-->(.*?)<!--\\/{$tag}-->/s", $this->all_content, $matches)) {
             throw $this->blockNotFound($block_name);
         }
         return $matches[1];
@@ -389,9 +389,9 @@ class Template
     /**
      * @return BlockState
      */
-    private function newBlock(string $html): array
+    private function newBlock(string $content): array
     {
-        return ['html' => $html, 'hide' => true, 'apply' => '', 'subs' => [], 'current_sub' => 0];
+        return ['content' => $content, 'hide' => true, 'apply' => '', 'subs' => [], 'current_sub' => 0];
     }
 
     /**

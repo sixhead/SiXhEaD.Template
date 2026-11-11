@@ -14,7 +14,7 @@ use RedisException;
 
 /**
  * Runs each example script in its own PHP process, the same way a web request
- * runs it, and compares the output with tests/fixtures/<name>.html.
+ * runs it, and checks the rendered content.
  */
 final class ExamplesTest extends TestCase
 {
@@ -37,9 +37,6 @@ final class ExamplesTest extends TestCase
         yield 'other1' => ['other1', [], []];
         yield 'other2' => ['other2', [], []];
         yield 'table' => ['table', [], []];
-        yield 'table-item-6' => ['table', ['item' => '6'], []];
-        yield 'table-item-6-fix' => ['table', ['item' => '6', 'fix' => '1'], []];
-        yield 'table-item-8-fix' => ['table', ['item' => '8', 'fix' => '1'], []];
     }
 
     /**
@@ -53,12 +50,28 @@ final class ExamplesTest extends TestCase
         self::assertStringEqualsFile($fixture, $this->runExample($script, $get, $server));
     }
 
-    public function testTableItemIsLimitedTo100(): void
+    public function testSimpleXmlExampleRendersValidDocument(): void
     {
-        $html = $this->runExample('table', ['item' => '500'], []);
-        self::assertSame(100, substr_count($html, '<td>'));
-        self::assertStringContainsString('<td>100</td>', $html);
-        self::assertStringNotContainsString('<td>101</td>', $html);
+        self::assertXmlStringEqualsXmlFile(
+            self::FIXTURES . '/simple.xml',
+            $this->runExample('simple-xml', [], []),
+        );
+    }
+
+    public function testSimpleJsonExampleRendersValidDocument(): void
+    {
+        self::assertSame(
+            ['title' => 'How to use "SiXhEaD.Template"', 'numbers' => [1, 2, 3, 4, 5]],
+            json_decode($this->runExample('simple-json', [], []), true, 512, JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public function testTableIgnoresQueryParameters(): void
+    {
+        self::assertStringEqualsFile(
+            self::FIXTURES . '/table.html',
+            $this->runExample('table', ['item' => '500', 'fix' => '0'], []),
+        );
     }
 
     /**

@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.3.0 - 2026-11-11
+
+- Fix: the table example uses six fixed items and always fills and closes the last row. The `item` and `fix` query parameters are no longer used.
+- Add simple XML and JSON examples with format-specific escaping and repeated blocks.
+- Rename `blockHtml()` to `blockContent()`. Update callers to the new method name.
+- Rename HTML-specific internals to content terminology. Subclasses using `all_html`, `subHtml()` or the block state's `html` key must use `all_content`, `subContent()` and `content` instead. Overridden rendering methods must also match the new `content` / `inner_content` parameter names when using named arguments.
+- Document HTML, XML, JSON and plain-text templates, and block direct web access to `_tp_*` files regardless of extension in the nginx example.
+
 ## 6.2.0 - 2026-11-10
 
 - Requires PHP 8.5. Runs with `error_reporting(E_ALL)` without warnings or deprecations.

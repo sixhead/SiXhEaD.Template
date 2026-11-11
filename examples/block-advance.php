@@ -11,7 +11,7 @@ $title = 'Block usage (advanced)';
 
 if ($member == 1) {
     $username = 'admin';
-    $raw = $tp_item->blockHtml('message-member-1');
+    $raw = $tp_item->blockContent('message-member-1');
     $message = $tp_item->applyBlock('message-member-1');
 
     // loop style 1
@@ -32,8 +32,8 @@ if ($member == 1) {
         $item2 .= $tp_item->applyBlock('item2');
     }
 } else {
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
-    $raw = $tp_item->blockHtml('message-member-0');
+    $ip = '127.0.0.1';
+    $raw = $tp_item->blockContent('message-member-0');
     $message = $tp_item->applyBlock('message-member-0');
 }
 

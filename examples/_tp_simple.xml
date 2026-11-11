@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<example>
+    <title>$title</title>
+    <numbers>
+<!--template:data-->
+        <item>$no</item>
+<!--/template:data-->
+    </numbers>
+</example>
